@@ -1,0 +1,190 @@
+datasource db {
+  provider = "mysql" // Cambia esto según tu base de datos
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model State {
+  id          Int       @id @default(autoincrement())
+  description String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId    Int
+  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  Orders      Order[]
+  OrderStates OrderState[]
+
+  @@map("States")
+}
+
+model Role {
+  id          Int       @id @default(autoincrement())
+  description String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId    Int
+  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  Users       User[]
+
+  @@map("Roles")
+}
+
+model Product {
+  id          Int            @id @default(autoincrement())
+  name        String
+  barcode     String
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
+  tenantId    Int
+  Tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  OrderDetail OrderDetail[]
+
+  @@map("Products")
+}
+
+model User {
+  id          Int             @id @default(autoincrement())
+  roleId      Int?            @map("role_id")
+  name      String
+  barcode     Int
+  password     String
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at")
+  warehouseId Int
+  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  tenantId    Int
+  Tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  Role        Role?           @relation(fields: [roleId], references: [id])
+  Orders      Order[]
+  OrderStates OrderState[]
+
+  @@map("Users")
+}
+
+model Order {
+  id                       Int                     @id @default(autoincrement())
+  stateId                  Int?                    @map("state_id")
+  amount                   Decimal
+  amountPicked             Decimal           @map("amount_picked")
+  userId                   Int?                    @map("user_id")
+  assemblyDate             DateTime                @map("assembly_date")
+  assemblySchedule         DateTime                    @map("assembly_schedule")
+  substitutionPreferenceId Int?
+  substitutionPreference   SubstitutionPreference? @relation(fields: [substitutionPreferenceId], references: [id])
+  internalComment          String?
+  createdAt                DateTime                @default(now()) @map("created_at")
+  updatedAt                DateTime                @default(now()) @updatedAt @map("updated_at")
+  warehouseId Int
+  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  tenantId                 Int
+  Tenant                   Tenant                 @relation(fields: [tenantId], references: [id])
+  State                    State?                  @relation(fields: [stateId], references: [id])
+  User                     User?                   @relation(fields: [userId], references: [id])
+  OrderDetail              OrderDetail[]
+  OrderPosition            OrderPosition[]
+  OrderState               OrderState[]
+
+  @@map("Orders")
+}
+
+model OrderDetail {
+  id           Int       @id @default(autoincrement())
+  orderId      Int       @map("order_id")
+  productId    Int       @map("product_id")
+  quantity     Int
+  quantityPicked Int     @map("quantity_picked")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId     Int
+  warehouseId Int
+  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  Tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  Order        Order     @relation(fields: [orderId], references: [id])
+  Product      Product   @relation(fields: [productId], references: [id])
+
+  @@map("OrderDetails")
+}
+
+model OrderPosition {
+  id        Int       @id @default(autoincrement())
+  orderId   Int       @map("order_id")
+  position  String
+  type      String
+  barcode   String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId  Int
+  warehouseId Int
+  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  Tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  Order     Order     @relation(fields: [orderId], references: [id])
+
+  @@map("OrderPositions")
+}
+
+model SubstitutionPreference {
+  id          Int       @id @default(autoincrement())
+  description String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId    Int
+  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  Orders      Order[]
+
+  @@map("SubstitutionPreferences")
+}
+
+model OrderState {
+  id          Int       @id @default(autoincrement())
+  orderId     Int       @map("order_id")
+  stateId     Int
+  userId      Int       @map("user_id")
+  creationDate DateTime @map("creation_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  tenantId    Int
+  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  Order       Order     @relation(fields: [orderId], references: [id])
+  State       State     @relation(fields: [stateId], references: [id])
+  User        User      @relation(fields: [userId], references: [id])
+
+  @@map("OrderStates")
+}
+
+model Tenant {
+  id                      Int                     @id @default(autoincrement())
+  name                    String
+  createdAt               DateTime                @default(now()) @map("created_at")
+  updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at")
+  States                  State[]
+  Roles                   Role[]
+  Products                Product[]
+  Users                   User[]
+  Orders                  Order[]
+  OrderDetails            OrderDetail[]
+  OrderPositions          OrderPosition[]
+  SubstitutionPreferences SubstitutionPreference[]
+  OrderStates             OrderState[]
+  Warehouses              Warehouse[]
+
+  @@map("Tenants")
+}
+
+model Warehouse {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int
+  name        String
+  location    String
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  Tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  Orders      Order[]
+  OrderDetails OrderDetail[]
+  OrderPositions OrderPosition[]
+  Users       User[]
+
+  @@map("Warehouses")
+}
