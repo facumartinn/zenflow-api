@@ -3,65 +3,79 @@ import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import { PrismaClient, type User } from '@prisma/client'
 import { generateToken } from '../utils/jwtUtils'
+import { httpStatus } from '../utils/httpStatus'
+import { createError, successResponse } from '../utils/responseHandler'
 
 const prisma = new PrismaClient()
 const saltRounds = 10
 
 interface UserRequestRequest {
-  username: string
+  userEmail: string
   password: string
+  roleId: number
   barcode: number
-  tenantId: number
+  tenant_id: number
 }
 
 export const registerUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
 
   try {
     if (!tenantId || !warehouseId) {
-      return res.status(400).send('Tenant and/or Warehouse ID is required')
+      return res.status(httpStatus.BAD_REQUEST).json(
+        createError(httpStatus.BAD_REQUEST, 'Tenant and/or Warehouse ID is required')
+      )
     }
 
-    const { username, password, barcode }: UserRequestRequest = req.body
+    const { userEmail, password, barcode, roleId }: UserRequestRequest = req.body
     const hashedPassword = await bcrypt.hash(password, saltRounds)
     const user: User = await prisma.user.create({
       data: {
-        name: username,
+        user_email: userEmail,
         password: hashedPassword,
+        role_id: roleId,
         barcode,
-        tenantId,
-        warehouseId
+        tenant_id: tenantId,
+        warehouse_id: warehouseId
       }
     })
-    return res.status(201).json(user)
+    return res.status(httpStatus.CREATED).json(user)
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message)
+    )
   }
 }
 
 export const loginUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
-  const { username, password }: UserRequestRequest = req.body
+  // const tenantId = res.locals.tenant_id
+  // const warehouseId = res.locals.warehouse_id
+  const { userEmail, password }: UserRequestRequest = req.body
 
   try {
-    const user: User | null = await prisma.user.findFirst({
+    const user: User | null = await prisma.user.findUnique({
       where: {
-        tenantId,
-        warehouseId,
-        name: username,
-        password
+        id: 1,
+        // tenant_id,
+        // warehouse_id,
+        user_email: userEmail
       }
     })
 
     if ((user == null) || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).send('Invalid credentials')
+      return res.status(httpStatus.UNAUTHORIZED).json(
+        createError(httpStatus.UNAUTHORIZED, 'Invalid credentials')
+      )
     }
 
     const token = generateToken(user.id)
-    return res.json({ token })
+    return res.status(httpStatus.OK).json(
+      successResponse(token, httpStatus.OK, 'Login successful')
+    )
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message)
+    )
   }
 }

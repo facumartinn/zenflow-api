@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 import { createUser, deleteUser, getAllUsers, getUser, updateUser } from '../controllers/userController.js';
 import { validateHeaders } from '../middlewares/validateHeaders.js';
-const router = Router();
+var router = Router();
 // Obtener todos los usuarios
 router.get('/', authenticateToken, validateHeaders, getAllUsers);
 // Obtener un usuario específico por ID

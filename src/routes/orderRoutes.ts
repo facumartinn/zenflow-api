@@ -27,7 +27,7 @@ router.get('/:id',
 )
 
 // Crear un nuevo pedido
-router.post('/',
+router.post('/create',
   authenticateToken,
   validateHeaders,
   createOrders

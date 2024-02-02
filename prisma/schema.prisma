@@ -1,190 +1,236 @@
-datasource db {
-  provider = "mysql" // Cambia esto según tu base de datos
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider = "prisma-client-js"
 }
 
-model State {
-  id          Int       @id @default(autoincrement())
-  description String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId    Int
-  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  Orders      Order[]
-  OrderStates OrderState[]
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
 
+model State {
+  id          Int          @id @default(autoincrement())
+  description String       @db.VarChar(255)
+  tenant_id   Int
+  createdAt   DateTime?    @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime?    @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  OrderStates OrderState[]
+  Orders      Order[]
+  Tenant      Tenant       @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "states_ibfk_1")
+
+  @@index([tenant_id], map: "idx_states_tenant_id")
   @@map("States")
 }
 
 model Role {
   id          Int       @id @default(autoincrement())
-  description String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId    Int
-  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  description String    @db.VarChar(255)
+  tenant_id   Int
+  createdAt   DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Tenant      Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "roles_ibfk_1")
   Users       User[]
 
+  @@index([tenant_id], map: "idx_roles_tenant_id")
   @@map("Roles")
 }
 
 model Product {
-  id          Int            @id @default(autoincrement())
-  name        String
-  barcode     String
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @default(now()) @updatedAt @map("updated_at")
-  tenantId    Int
-  Tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  barcode     String        @db.VarChar(255)
+  tenant_id   Int
+  createdAt   DateTime?     @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime?     @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
   OrderDetail OrderDetail[]
+  Tenant      Tenant        @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "products_ibfk_1")
 
+  @@index([tenant_id], map: "idx_products_tenant_id")
   @@map("Products")
 }
 
 model User {
-  id          Int             @id @default(autoincrement())
-  roleId      Int?            @map("role_id")
-  name      String
-  barcode     Int
-  password     String
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @default(now()) @updatedAt @map("updated_at")
-  warehouseId Int
-  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
-  tenantId    Int
-  Tenant      Tenant        @relation(fields: [tenantId], references: [id])
-  Role        Role?           @relation(fields: [roleId], references: [id])
-  Orders      Order[]
-  OrderStates OrderState[]
+  id           Int          @id @default(autoincrement())
+  role_id      Int
+  user_email   String       @db.VarChar(255)
+  barcode      Int
+  password     String       @db.VarChar(255)
+  tenant_id    Int
+  warehouse_id Int
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime?    @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  OrderStates  OrderState[]
+  Orders       Order[]
+  Role         Role         @relation(fields: [role_id], references: [id], onUpdate: Restrict, map: "users_ibfk_1")
+  Tenant       Tenant       @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "users_ibfk_2")
+  Warehouse    Warehouse    @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "users_ibfk_3")
 
+  @@index([role_id], map: "idx_users_role_id")
+  @@index([tenant_id], map: "idx_users_tenant_id")
+  @@index([warehouse_id], map: "idx_users_warehouse_id")
   @@map("Users")
 }
 
 model Order {
-  id                       Int                     @id @default(autoincrement())
-  stateId                  Int?                    @map("state_id")
-  amount                   Decimal
-  amountPicked             Decimal           @map("amount_picked")
-  userId                   Int?                    @map("user_id")
-  assemblyDate             DateTime                @map("assembly_date")
-  assemblySchedule         DateTime                    @map("assembly_schedule")
-  substitutionPreferenceId Int?
-  substitutionPreference   SubstitutionPreference? @relation(fields: [substitutionPreferenceId], references: [id])
-  internalComment          String?
-  createdAt                DateTime                @default(now()) @map("created_at")
-  updatedAt                DateTime                @default(now()) @updatedAt @map("updated_at")
-  warehouseId Int
-  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
-  tenantId                 Int
-  Tenant                   Tenant                 @relation(fields: [tenantId], references: [id])
-  State                    State?                  @relation(fields: [stateId], references: [id])
-  User                     User?                   @relation(fields: [userId], references: [id])
-  OrderDetail              OrderDetail[]
-  OrderPosition            OrderPosition[]
-  OrderState               OrderState[]
+  id                         Int                     @id @default(autoincrement())
+  state_id                   Int?
+  amount                     Decimal                 @db.Decimal(10, 2)
+  amountPicked               Decimal?                @map("amount_picked") @db.Decimal(10, 2)
+  user_id                    Int?
+  assemblyDate               DateTime?               @map("assembly_date") @db.DateTime(0)
+  assemblySchedule           DateTime?               @map("assembly_schedule") @db.DateTime(0)
+  substitution_preference_id Int?
+  internal_comment           String?                 @db.Text
+  tenant_id                  Int
+  warehouse_id               Int
+  createdAt                  DateTime?               @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt                  DateTime?               @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  OrderDetail                OrderDetail[]
+  OrderPosition              OrderPosition[]
+  OrderState                 OrderState[]
+  State                      State?                  @relation(fields: [state_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "orders_ibfk_1")
+  User                       User?                   @relation(fields: [user_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "orders_ibfk_2")
+  substitutionPreference     SubstitutionPreference? @relation(fields: [substitution_preference_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "orders_ibfk_3")
+  Tenant                     Tenant                  @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orders_ibfk_4")
+  Warehouse                  Warehouse               @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orders_ibfk_5")
 
+  @@index([state_id], map: "idx_orders_state_id")
+  @@index([substitution_preference_id], map: "idx_orders_substitution_preference_id")
+  @@index([tenant_id], map: "idx_orders_tenant_id")
+  @@index([user_id], map: "idx_orders_user_id")
+  @@index([warehouse_id], map: "idx_orders_warehouse_id")
   @@map("Orders")
 }
 
 model OrderDetail {
-  id           Int       @id @default(autoincrement())
-  orderId      Int       @map("order_id")
-  productId    Int       @map("product_id")
-  quantity     Int
-  quantityPicked Int     @map("quantity_picked")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId     Int
-  warehouseId Int
-  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
-  Tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  Order        Order     @relation(fields: [orderId], references: [id])
-  Product      Product   @relation(fields: [productId], references: [id])
+  id             Int       @id @default(autoincrement())
+  order_id       Int       @map("order_id")
+  product_id     Int       @map("product_id")
+  quantity       Int
+  quantityPicked Int?
+  tenant_id      Int
+  warehouse_id   Int
+  createdAt      DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Order          Order     @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_1")
+  Product        Product   @relation(fields: [product_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_2")
+  Tenant         Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_3")
+  Warehouse      Warehouse @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_4")
 
+  @@index([order_id], map: "idx_orderdetails_order_id")
+  @@index([product_id], map: "idx_orderdetails_product_id")
+  @@index([tenant_id], map: "idx_orderdetails_tenant_id")
+  @@index([warehouse_id], map: "idx_orderdetails_warehouse_id")
   @@map("OrderDetails")
 }
 
 model OrderPosition {
-  id        Int       @id @default(autoincrement())
-  orderId   Int       @map("order_id")
-  position  String
-  type      String
-  barcode   String
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId  Int
-  warehouseId Int
-  Warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
-  Tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  Order     Order     @relation(fields: [orderId], references: [id])
+  id           Int       @id @default(autoincrement())
+  order_id     Int       @map("order_id")
+  position     String    @db.VarChar(255)
+  type         String    @db.VarChar(255)
+  barcode      String    @db.VarChar(255)
+  tenant_id    Int
+  warehouse_id Int
+  createdAt    DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Order        Order     @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "orderpositions_ibfk_1")
+  Tenant       Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orderpositions_ibfk_2")
+  Warehouse    Warehouse @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orderpositions_ibfk_3")
 
+  @@index([order_id], map: "idx_orderpositions_order_id")
+  @@index([tenant_id], map: "idx_orderpositions_tenant_id")
+  @@index([warehouse_id], map: "idx_orderpositions_warehouse_id")
   @@map("OrderPositions")
 }
 
 model SubstitutionPreference {
   id          Int       @id @default(autoincrement())
-  description String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId    Int
-  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  description String    @db.VarChar(255)
+  tenant_id   Int
+  createdAt   DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
   Orders      Order[]
+  Tenant      Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "substitutionpreferences_ibfk_1")
 
+  @@index([tenant_id], map: "idx_substitutionpreferences_tenant_id")
   @@map("SubstitutionPreferences")
 }
 
 model OrderState {
-  id          Int       @id @default(autoincrement())
-  orderId     Int       @map("order_id")
-  stateId     Int
-  userId      Int       @map("user_id")
-  creationDate DateTime @map("creation_date")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-  tenantId    Int
-  Tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  Order       Order     @relation(fields: [orderId], references: [id])
-  State       State     @relation(fields: [stateId], references: [id])
-  User        User      @relation(fields: [userId], references: [id])
+  id           Int       @id @default(autoincrement())
+  order_id     Int       @map("order_id")
+  state_id     Int
+  user_id      Int       @map("user_id")
+  creationDate DateTime  @db.DateTime(0)
+  tenant_id    Int
+  createdAt    DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Order        Order     @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "orderstates_ibfk_1")
+  State        State     @relation(fields: [state_id], references: [id], onUpdate: Restrict, map: "orderstates_ibfk_2")
+  User         User      @relation(fields: [user_id], references: [id], onUpdate: Restrict, map: "orderstates_ibfk_3")
+  Tenant       Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orderstates_ibfk_4")
 
+  @@index([order_id], map: "idx_orderstates_order_id")
+  @@index([state_id], map: "idx_orderstates_state_id")
+  @@index([tenant_id], map: "idx_orderstates_tenant_id")
+  @@index([user_id], map: "idx_orderstates_user_id")
   @@map("OrderStates")
 }
 
 model Tenant {
-  id                      Int                     @id @default(autoincrement())
-  name                    String
-  createdAt               DateTime                @default(now()) @map("created_at")
-  updatedAt               DateTime                @default(now()) @updatedAt @map("updated_at")
-  States                  State[]
-  Roles                   Role[]
-  Products                Product[]
-  Users                   User[]
-  Orders                  Order[]
+  id                      Int                      @id @default(autoincrement())
+  name                    String                   @db.VarChar(255)
+  contactEmail            String?                  @map("contact_email") @db.VarChar(255)
+  contactPhone            String?                  @map("contact_phone") @db.VarChar(255)
+  address                 String?                  @db.Text
+  billingAddress          String?                  @map("billing_address") @db.Text
+  paymentMethod           String?                  @map("payment_method") @db.VarChar(255)
+  status                  String?                  @default("activo") @db.VarChar(50)
+  registrationDate        DateTime?                @map("registration_date") @db.DateTime(0)
+  lastLoginDate           DateTime?                @map("last_login_date") @db.DateTime(0)
+  subscriptionPlan        String?                  @map("subscription_plan") @db.VarChar(255)
+  customSettings          String?                  @map("custom_settings") @db.LongText
+  apiKey                  String?                  @map("api_key") @db.VarChar(255)
+  createdAt               DateTime?                @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt               DateTime?                @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
   OrderDetails            OrderDetail[]
   OrderPositions          OrderPosition[]
-  SubstitutionPreferences SubstitutionPreference[]
   OrderStates             OrderState[]
+  Orders                  Order[]
+  Products                Product[]
+  Roles                   Role[]
+  States                  State[]
+  SubstitutionPreferences SubstitutionPreference[]
+  Users                   User[]
   Warehouses              Warehouse[]
 
   @@map("Tenants")
 }
 
 model Warehouse {
-  id          Int       @id @default(autoincrement())
-  tenantId    Int
-  name        String
-  location    String
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
-  Tenant      Tenant    @relation(fields: [tenantId], references: [id])
-  Orders      Order[]
-  OrderDetails OrderDetail[]
-  OrderPositions OrderPosition[]
-  Users       User[]
+  id                 Int             @id @default(autoincrement())
+  tenant_id          Int
+  name               String          @db.VarChar(255)
+  location           String?         @db.VarChar(255)
+  size               Int?
+  type               String?         @db.VarChar(100)
+  manager            String?         @db.VarChar(255)
+  contactInfo        String?         @map("contact_info") @db.VarChar(255)
+  operatingHours     String?         @map("operating_hours") @db.VarChar(100)
+  temperatureControl Boolean?        @default(false) @map("temperature_control")
+  securityFeatures   String?         @map("security_features") @db.Text
+  inventoryTypes     String?         @map("inventory_types") @db.VarChar(255)
+  facilityConditions String?         @map("facility_conditions") @db.Text
+  emergencyContact   String?         @map("emergency_contact") @db.VarChar(255)
+  customAttributes   String?         @map("custom_attributes") @db.LongText
+  createdAt          DateTime?       @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt          DateTime?       @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  OrderDetails       OrderDetail[]
+  OrderPositions     OrderPosition[]
+  Orders             Order[]
+  Users              User[]
+  Tenant             Tenant          @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "warehouses_ibfk_1")
 
+  @@index([tenant_id], map: "idx_warehouses_tenant_id")
   @@map("Warehouses")
 }

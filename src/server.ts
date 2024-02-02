@@ -6,5 +6,5 @@ const app = createApp(prisma)
 
 const PORT = (process.env.PORT != null) || 3000
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`)
+  console.log(`Express server is listening at http://localhost:${PORT} 🚀`)
 })

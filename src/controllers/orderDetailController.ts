@@ -4,10 +4,15 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 export const getAllOrderDetails = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   try {
-    const orderDetails = await prisma.orderDetail.findMany({ where: { tenantId, warehouseId } })
+    const orderDetails = await prisma.orderDetail.findMany({
+      where: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId
+      }
+    })
     return res.json(orderDetails)
   } catch (error: any) {
     return res.status(500).json({ error: error.message })
@@ -15,15 +20,15 @@ export const getAllOrderDetails = async (req: Request, res: Response): Promise<R
 }
 
 export const getOrderDetailsByIds = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   const { ids } = req.body // Asumimos que el cuerpo de la solicitud contiene un array de IDs
 
   try {
     const orderDetails = await prisma.orderDetail.findMany({
       where: {
-        tenantId,
-        warehouseId,
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
         id: {
           in: ids
         }
@@ -36,11 +41,17 @@ export const getOrderDetailsByIds = async (req: Request, res: Response): Promise
 }
 
 export const getOrderDetail = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   const orderDetailId = parseInt(req.params.id)
   try {
-    const orderDetail = await prisma.orderDetail.findUnique({ where: { tenantId, warehouseId, id: orderDetailId } })
+    const orderDetail = await prisma.orderDetail.findUnique({
+      where: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
+        id: orderDetailId
+      }
+    })
     return (orderDetail != null) ? res.json(orderDetail) : res.status(404).send('OrderDetail not found')
   } catch (error: any) {
     return res.status(500).json({ error: error.message })
@@ -48,8 +59,8 @@ export const getOrderDetail = async (req: Request, res: Response): Promise<Respo
 }
 
 export const createOrderDetail = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   const { orderId, productId, quantity, quantityPicked } = req.body
 
   if (!tenantId || !warehouseId) {
@@ -58,7 +69,14 @@ export const createOrderDetail = async (req: Request, res: Response): Promise<Re
 
   try {
     const newOrderDetail = await prisma.orderDetail.create({
-      data: { tenantId, warehouseId, orderId, productId, quantity, quantityPicked }
+      data: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
+        order_id: orderId,
+        product_id: productId,
+        quantity,
+        quantityPicked
+      }
     })
     return res.json(newOrderDetail)
   } catch (error: any) {
@@ -66,25 +84,9 @@ export const createOrderDetail = async (req: Request, res: Response): Promise<Re
   }
 }
 
-export const updateOrderDetail = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
-  const orderDetailId = parseInt(req.params.id)
-  const { quantity, quantityPicked } = req.body
-  try {
-    const updatedOrderDetail = await prisma.orderDetail.update({
-      where: { tenantId, warehouseId, id: orderDetailId },
-      data: { quantity, quantityPicked }
-    })
-    return res.json(updatedOrderDetail)
-  } catch (error: any) {
-    return res.status(400).json({ error: error.message })
-  }
-}
-
 export const updateOrderDetails = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   const updates = req.body // Asumimos que esto es un array de objetos con { orderDetailId, newStatus, ...otrosDatos }
 
   try {
@@ -94,15 +96,27 @@ export const updateOrderDetails = async (req: Request, res: Response): Promise<R
 
         // Actualizar OrderDetail
         await prisma.orderDetail.update({
-          where: { tenantId, warehouseId, id: orderDetailId },
-          data: { ...otrosDatos }
+          where: {
+            tenant_id: tenantId,
+            warehouse_id: warehouseId,
+            id: orderDetailId
+          },
+          data: {
+            ...otrosDatos
+          }
         })
 
         // Actualizar el estado del Order asociado, si es necesario
         if (newStatus) {
           await prisma.order.update({
-            where: { tenantId, warehouseId, id: update.orderId }, // Asegúrate de tener el orderId en el update
-            data: { stateId: newStatus }
+            where: {
+              tenant_id: tenantId,
+              warehouse_id: warehouseId,
+              id: update.orderId
+            }, // Asegúrate de tener el orderId en el update
+            data: {
+              state_id: newStatus
+            }
           })
         }
       }
@@ -115,11 +129,17 @@ export const updateOrderDetails = async (req: Request, res: Response): Promise<R
 }
 
 export const deleteOrderDetail = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = req.tenantId
-  const warehouseId = req.warehouseId
+  const tenantId = res.locals.tenant_id
+  const warehouseId = res.locals.warehouse_id
   const orderDetailId = parseInt(req.params.id)
   try {
-    await prisma.orderDetail.delete({ where: { tenantId, warehouseId, id: orderDetailId } })
+    await prisma.orderDetail.delete({
+      where: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
+        id: orderDetailId
+      }
+    })
     return res.status(204).send()
   } catch (error: any) {
     return res.status(500).json({ error: error.message })

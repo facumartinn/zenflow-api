@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 import { createRole, getRole, updateRole, deleteRole, getAllRoles } from '../controllers/roleController.js';
 import { validateHeaders } from '../middlewares/validateHeaders.js';
-const router = Router();
+var router = Router();
 // Obtener todos los roles
 router.get('/', authenticateToken, validateHeaders, getAllRoles);
 // Obtener un rol específico por ID

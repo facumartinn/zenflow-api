@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { authenticateToken } from '../middlewares/authMiddleware'
-import { getAllOrderDetails, getOrderDetail, createOrderDetail, updateOrderDetail, deleteOrderDetail, getOrderDetailsByIds, updateOrderDetails } from '../controllers/orderDetailController'
+import { getAllOrderDetails, getOrderDetail, createOrderDetail, deleteOrderDetail, getOrderDetailsByIds, updateOrderDetails } from '../controllers/orderDetailController'
 import { validateHeaders } from '../middlewares/validateHeaders'
 
 const router = Router()
@@ -33,14 +33,7 @@ router.post('/',
   createOrderDetail
 )
 
-// Actualizar un detalle de pedido existente
-router.put('/:id',
-  authenticateToken,
-  validateHeaders,
-  updateOrderDetail
-)
-
-// Actualizar uno o más OrderDetails
+// Actualizar uno o más pedidos
 router.put('/update-multiple',
   authenticateToken,
   validateHeaders,

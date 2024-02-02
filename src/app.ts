@@ -14,11 +14,11 @@ function createApp (prisma: PrismaClient): any {
   app.use(express.json()) // Middleware para parsear JSON
 
   // Registra tus rutas aquí
+  app.use('/auth', authRoutes)
   app.use('/states', stateRoutes)
   app.use('/roles', roleRoutes)
   app.use('/users', userRoutes)
   app.use('/orders', orderRoutes)
-  app.use('/auth', authRoutes)
   app.use('/order-details', orderDetailRoutes)
   // app.use('/order-states', orderStateRoutes)
   //   app.use('/order-positions', orderPositionRoutes)

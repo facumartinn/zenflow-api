@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticateToken } from '../middlewares/authMiddleware.js';
 import { createState, deleteState, getAllStates, getState, updateState } from '../controllers/stateController.js';
 import { validateHeaders } from '../middlewares/validateHeaders.js';
-const router = Router();
+var router = Router();
 // Obtener todos los estados
 router.get('/', authenticateToken, validateHeaders, getAllStates);
 // Obtener un estado específico por ID

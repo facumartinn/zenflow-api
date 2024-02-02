@@ -5,10 +5,10 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && ts-add-js-extension --dir=build",
     "ts-to-js": "ts-add-js-extension --dir=build",
     "start": "node build/server.js",
-    "dev": "node --watch 'src/**/*' --exec 'ts-node' src/server.ts",
+    "dev": "nodemon - exec ts-node --esm src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -21,6 +21,8 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "nodemon": "^3.0.3",
+    "save-dev": "^0.0.1-security",
     "ts-add-js-extension": "^1.6.0"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
     "prisma": "^5.8.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "webpack": "^5.90.0",
     "webpack-cli": "^5.1.4"
