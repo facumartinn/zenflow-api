@@ -1,21 +1,27 @@
 import type { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
+import { httpStatus } from '../utils/httpStatus'
+import { createError, successResponse } from '../utils/responseHandler'
+import { getOrderDetails } from '../services/orderDetailService'
+import { orderDetailMapper } from '../utils/orderUtils'
 
 const prisma = new PrismaClient()
 
 export const getAllOrderDetails = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
   try {
-    const orderDetails = await prisma.orderDetail.findMany({
-      where: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId
-      }
-    })
-    return res.json(orderDetails)
+    const orderDetails = await getOrderDetails(tenantId, warehouseId)
+
+    if (orderDetails.length === 0) {
+      return res.status(httpStatus.NOT_FOUND).json(createError(httpStatus.NOT_FOUND, 'No OrderDetails found'))
+    }
+
+    return res.status(httpStatus.OK).json(successResponse(orderDetails, httpStatus.OK, 'OrderDetails retrieved successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }
 
@@ -24,8 +30,12 @@ export const getOrderDetailsByIds = async (req: Request, res: Response): Promise
   const warehouseId = res.locals.warehouse_id
   const { ids } = req.body // Asumimos que el cuerpo de la solicitud contiene un array de IDs
 
+  if (!ids || ids.length === 0) {
+    return res.status(httpStatus.BAD_REQUEST).json(createError(httpStatus.BAD_REQUEST, 'At least one ID is required'))
+  }
+
   try {
-    const orderDetails = await prisma.orderDetail.findMany({
+    const orderHeaders = await prisma.order.findMany({
       where: {
         tenant_id: tenantId,
         warehouse_id: warehouseId,
@@ -34,53 +44,95 @@ export const getOrderDetailsByIds = async (req: Request, res: Response): Promise
         }
       }
     })
-    return res.json(orderDetails)
+    const orderDetails = await prisma.orderDetail.findMany({
+      where: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
+        order_id: {
+          in: ids
+        }
+      }
+    })
+
+    if (orderDetails.length === 0) {
+      return res.status(httpStatus.NOT_FOUND).json(createError(httpStatus.NOT_FOUND, 'No OrderDetails found'))
+    }
+
+    const orderByIds = orderDetailMapper(orderDetails, orderHeaders)
+
+    return res.status(httpStatus.OK).json(successResponse(orderByIds, httpStatus.OK, 'OrderDetails retrieved successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }
 
 export const getOrderDetail = async (req: Request, res: Response): Promise<Response> => {
   const tenantId = res.locals.tenant_id
   const warehouseId = res.locals.warehouse_id
-  const orderDetailId = parseInt(req.params.id)
+  const orderId = parseInt(req.params.id)
   try {
-    const orderDetail = await prisma.orderDetail.findUnique({
+    const orderHeader = await prisma.order.findUnique({
       where: {
         tenant_id: tenantId,
         warehouse_id: warehouseId,
-        id: orderDetailId
+        id: orderId
       }
     })
-    return (orderDetail != null) ? res.json(orderDetail) : res.status(404).send('OrderDetail not found')
+
+    const orderDetail = await prisma.orderDetail.findMany({
+      where: {
+        tenant_id: tenantId,
+        warehouse_id: warehouseId,
+        order_id: orderId
+      }
+    })
+
+    if (!orderDetail) {
+      return res.status(httpStatus.NOT_FOUND).json(createError(httpStatus.NOT_FOUND, 'OrderDetail not found'))
+    }
+
+    const orderById = orderDetailMapper(orderDetail, [orderHeader])
+
+    return res.status(httpStatus.OK).json(successResponse(orderById, httpStatus.OK, 'OrderDetail retrieved successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }
 
 export const createOrderDetail = async (req: Request, res: Response): Promise<Response> => {
   const tenantId = res.locals.tenant_id
   const warehouseId = res.locals.warehouse_id
-  const { orderId, productId, quantity, quantityPicked } = req.body
+  const orderDetails = req.body
+
+  if (orderDetails.length === 0) {
+    return res.status(httpStatus.BAD_REQUEST).json(createError(httpStatus.BAD_REQUEST, 'At least one order is required'))
+  }
+
+  const orderWithMetadata = orderDetails.map((order: any) => {
+    return {
+      ...order,
+      tenant_id: tenantId,
+      warehouse_id: warehouseId
+    }
+  })
 
   if (!tenantId || !warehouseId) {
-    return res.status(400).send('Tenant and/or Warehouse ID is required')
+    return res.status(httpStatus.BAD_REQUEST).json(createError(httpStatus.BAD_REQUEST, 'Tenant and/or Warehouse ID is required'))
   }
 
   try {
-    const newOrderDetail = await prisma.orderDetail.create({
-      data: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId,
-        order_id: orderId,
-        product_id: productId,
-        quantity,
-        quantityPicked
-      }
+    const newOrderDetail = await prisma.orderDetail.createMany({
+      data: orderWithMetadata
     })
-    return res.json(newOrderDetail)
+    return res.status(httpStatus.OK).json(successResponse(newOrderDetail, httpStatus.OK, 'OrderDetail created successfully'))
   } catch (error: any) {
-    return res.status(400).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }
 
@@ -122,9 +174,11 @@ export const updateOrderDetails = async (req: Request, res: Response): Promise<R
       }
     })
 
-    return res.status(200).send('OrderDetails updated successfully')
+    return res.status(httpStatus.OK).json(successResponse(null, httpStatus.OK, 'OrderDetails updated successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }
 
@@ -140,8 +194,10 @@ export const deleteOrderDetail = async (req: Request, res: Response): Promise<Re
         id: orderDetailId
       }
     })
-    return res.status(204).send()
+    return res.status(httpStatus.NO_CONTENT).send()
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
+      createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string)
+    )
   }
 }

@@ -12,14 +12,14 @@ router.get('/',
   getAllOrderDetails
 )
 
-// Obtener detalles de pedidos por IDs
-router.post('/by-ids',
+// Obtener detalles de pedidos por IDs de pedidos
+router.get('/by-ids',
   authenticateToken,
   validateHeaders,
   getOrderDetailsByIds
 )
 
-// Obtener un detalle de pedido específico por ID
+// Obtener un detalle de pedido específico por ID de pedido
 router.get('/:id',
   authenticateToken,
   validateHeaders,

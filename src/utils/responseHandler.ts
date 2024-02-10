@@ -13,6 +13,8 @@ interface SuccessResponse {
   data: any
 }
 
+// node http
+
 export const createError = (status: number, message: string): ErrorResponse => {
   return {
     error: {

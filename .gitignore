@@ -1,4 +1,6 @@
 node_modules
+build/*
+# !build/
 # Keep environment variables out of version control
 .env
-build/
+/build/

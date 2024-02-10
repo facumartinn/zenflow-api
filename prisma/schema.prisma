@@ -10,14 +10,11 @@ datasource db {
 model State {
   id          Int          @id @default(autoincrement())
   description String       @db.VarChar(255)
-  tenant_id   Int
   createdAt   DateTime?    @default(now()) @map("created_at") @db.DateTime(0)
   updatedAt   DateTime?    @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
   OrderStates OrderState[]
   Orders      Order[]
-  Tenant      Tenant       @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "states_ibfk_1")
 
-  @@index([tenant_id], map: "idx_states_tenant_id")
   @@map("States")
 }
 
@@ -35,14 +32,13 @@ model Role {
 }
 
 model Product {
-  id          Int           @id @default(autoincrement())
-  name        String        @db.VarChar(255)
-  barcode     String        @db.VarChar(255)
-  tenant_id   Int
-  createdAt   DateTime?     @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt   DateTime?     @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
-  OrderDetail OrderDetail[]
-  Tenant      Tenant        @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "products_ibfk_1")
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  barcode   String    @db.VarChar(255)
+  tenant_id Int
+  createdAt DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Tenant    Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "products_ibfk_1")
 
   @@index([tenant_id], map: "idx_products_tenant_id")
   @@map("Products")
@@ -73,6 +69,7 @@ model User {
 model Order {
   id                         Int                     @id @default(autoincrement())
   state_id                   Int?
+  state_picking_id           Int?
   amount                     Decimal                 @db.Decimal(10, 2)
   amountPicked               Decimal?                @map("amount_picked") @db.Decimal(10, 2)
   user_id                    Int?
@@ -92,32 +89,36 @@ model Order {
   substitutionPreference     SubstitutionPreference? @relation(fields: [substitution_preference_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "orders_ibfk_3")
   Tenant                     Tenant                  @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orders_ibfk_4")
   Warehouse                  Warehouse               @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orders_ibfk_5")
+  StatesPicking              StatesPicking?          @relation(fields: [state_picking_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "orders_ibfk_6")
 
   @@index([state_id], map: "idx_orders_state_id")
   @@index([substitution_preference_id], map: "idx_orders_substitution_preference_id")
   @@index([tenant_id], map: "idx_orders_tenant_id")
   @@index([user_id], map: "idx_orders_user_id")
   @@index([warehouse_id], map: "idx_orders_warehouse_id")
+  @@index([state_picking_id], map: "orders_ibfk_6")
   @@map("Orders")
 }
 
 model OrderDetail {
-  id             Int       @id @default(autoincrement())
-  order_id       Int       @map("order_id")
-  product_id     Int       @map("product_id")
-  quantity       Int
-  quantityPicked Int?
-  tenant_id      Int
-  warehouse_id   Int
-  createdAt      DateTime? @default(now()) @map("created_at") @db.DateTime(0)
-  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
-  Order          Order     @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_1")
-  Product        Product   @relation(fields: [product_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_2")
-  Tenant         Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_3")
-  Warehouse      Warehouse @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_4")
+  id              Int       @id @default(autoincrement())
+  order_id        Int       @map("order_id")
+  product_id      Int       @map("product_id")
+  product_name    String    @db.VarChar(255)
+  product_photo   String?   @db.VarChar(255)
+  product_barcode String?   @db.VarChar(45)
+  quantity        Int
+  quantityPicked  Int?
+  order           Int?
+  tenant_id       Int
+  warehouse_id    Int
+  createdAt       DateTime? @default(now()) @map("created_at") @db.DateTime(0)
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.DateTime(0)
+  Order           Order     @relation(fields: [order_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_1")
+  Tenant          Tenant    @relation(fields: [tenant_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_3")
+  Warehouse       Warehouse @relation(fields: [warehouse_id], references: [id], onUpdate: Restrict, map: "orderdetails_ibfk_4")
 
   @@index([order_id], map: "idx_orderdetails_order_id")
-  @@index([product_id], map: "idx_orderdetails_product_id")
   @@index([tenant_id], map: "idx_orderdetails_tenant_id")
   @@index([warehouse_id], map: "idx_orderdetails_warehouse_id")
   @@map("OrderDetails")
@@ -199,7 +200,6 @@ model Tenant {
   Orders                  Order[]
   Products                Product[]
   Roles                   Role[]
-  States                  State[]
   SubstitutionPreferences SubstitutionPreference[]
   Users                   User[]
   Warehouses              Warehouse[]
@@ -233,4 +233,12 @@ model Warehouse {
 
   @@index([tenant_id], map: "idx_warehouses_tenant_id")
   @@map("Warehouses")
+}
+
+model StatesPicking {
+  id          Int       @id @default(autoincrement())
+  description String    @db.VarChar(255)
+  created_at  DateTime? @default(now()) @db.DateTime(0)
+  updated_at  DateTime? @default(now()) @db.DateTime(0)
+  Orders      Order[]
 }
