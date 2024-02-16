@@ -1,4 +1,5 @@
 import express from 'express'
+import helmet from 'helmet'
 import { type PrismaClient } from '@prisma/client'
 import orderRoutes from './routes/orderRoutes'
 import roleRoutes from './routes/roleRoutes'
@@ -11,6 +12,7 @@ import orderDetailRoutes from './routes/orderDetailRoutes'
 function createApp (prisma: PrismaClient): any {
   const app = express()
 
+  app.use(helmet())
   app.use(express.json()) // Middleware para parsear JSON
 
   // Registra tus rutas aquí
@@ -21,9 +23,9 @@ function createApp (prisma: PrismaClient): any {
   app.use('/orders', orderRoutes)
   app.use('/order-details', orderDetailRoutes)
   // app.use('/order-states', orderStateRoutes)
-  //   app.use('/order-positions', orderPositionRoutes)
-  //   app.use('/substitution-preferences', substitutionPreferenceRoutes)
-  //   app.use('/products', productRoutes)
+  // app.use('/order-positions', orderPositionRoutes)
+  // app.use('/substitution-preferences', substitutionPreferenceRoutes)
+  // app.use('/products', productRoutes)
 
   // Aquí puedes agregar más configuraciones de nivel de aplicación
   // como middlewares personalizados, configuraciones de seguridad, etc.
