@@ -2,6 +2,7 @@ import { type Request, type Response } from 'express'
 import * as orderService from '../services/orderService'
 import { httpStatus } from '../utils/httpStatus'
 import { createError, successResponse } from '../utils/responseHandler'
+import { type Order } from '@prisma/client'
 
 export const getAllOrders = async (req: Request, res: Response): Promise<Response> => {
   const tenantId: number = res.locals.tenant_id
@@ -71,7 +72,7 @@ export const createOrders = async (req: Request, res: Response): Promise<Respons
   }
 
   try {
-    const ordersData = req.body // Asume que req.body es un array de objetos de pedido
+    const ordersData: Order[] = req.body // Asume que req.body es un array de objetos de pedido
     const newOrders = await orderService.createOrders(ordersData, tenantId, warehouseId)
     if (newOrders.count === 0) {
       return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(
@@ -115,7 +116,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<Re
   const tenantId: number = res.locals.tenant_id
   const warehouseId: number = res.locals.warehouse_id
   const orderId = parseInt(req.params.orderId)
-  const { newStateId, userId }: { newStateId: number, userId: number } = req.body
+  const { newStateId, userId } = req.body
 
   if (!tenantId || !warehouseId) {
     return res.status(httpStatus.BAD_REQUEST).json(
@@ -124,7 +125,7 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<Re
   }
 
   try {
-    await orderService.updateOrderStatus(orderId, newStateId, userId, tenantId, warehouseId)
+    await orderService.updateOrderStatus(orderId, newStateId as number, userId as number, tenantId, warehouseId)
     return res.status(httpStatus.OK).json(
       successResponse({ message: 'Order status updated successfully' }, httpStatus.OK, 'Order status updated successfully')
     )

@@ -1,123 +1,67 @@
 import type { Request, Response } from 'express'
-import { PrismaClient } from '@prisma/client'
-import { createError } from '../utils/responseHandler'
+import * as userService from '../services/userService'
+import { createError, successResponse } from '../utils/responseHandler'
 import { httpStatus } from '../utils/httpStatus'
 
-const prisma = new PrismaClient()
-
 export const getAllUsers = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
   try {
-    const users = await prisma.user.findMany({
-      where: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId
-      }
-    })
-    return res.json(users)
+    const users = await userService.getAllUsers(tenantId, warehouseId)
+    return res.status(httpStatus.OK).json(successResponse(users, httpStatus.OK, 'Users retrieved successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string))
   }
 }
 
 export const getUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
   const userId = parseInt(req.params.id)
-
   try {
-    const user = await prisma.user.findUnique({
-      where: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId,
-        id: userId
-      }
-    })
-
-    if (user != null) {
-      return res.json(user)
-    } else {
-      return res.status(httpStatus.NOT_FOUND).send(
-        createError(httpStatus.NOT_FOUND, 'User not found')
-      )
+    const user = await userService.getUser(tenantId, warehouseId, userId)
+    if (!user) {
+      return res.status(httpStatus.NOT_FOUND).json(createError(httpStatus.NOT_FOUND, 'User not found'))
     }
+    return res.status(httpStatus.OK).json(successResponse(user, httpStatus.OK, 'User retrieved successfully'))
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string))
   }
 }
 
 export const createUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
-
-  if (!tenantId || !warehouseId) {
-    return res.status(400).send('Tenant and/or Warehouse ID is required')
-  }
-
-  const { userEmail, password, barcode, roleId } = req.body
-
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
+  const userData = req.body
   try {
-    const newUser = await prisma.user.create({
-      data: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId,
-        user_email: userEmail,
-        password,
-        barcode,
-        role_id: roleId
-      }
-    })
-
-    return res.json(newUser)
+    const newUser = await userService.createUser(tenantId, warehouseId, userData)
+    return res.status(httpStatus.CREATED).json(successResponse(newUser, httpStatus.CREATED, 'User created successfully'))
   } catch (error: any) {
-    return res.status(400).json({ error: error.message })
+    return res.status(httpStatus.BAD_REQUEST).json(createError(httpStatus.BAD_REQUEST, error.message as string))
   }
 }
 
 export const updateUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
   const userId = parseInt(req.params.id)
-  const { userEmail, password, barcode, roleId } = req.body
-
+  const userData = req.body
   try {
-    const updatedUser = await prisma.user.update({
-      where: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId,
-        id: userId
-      },
-      data: {
-        user_email: userEmail,
-        password,
-        barcode,
-        role_id: roleId
-      }
-    })
-
-    return res.json(updatedUser)
+    const updatedUser = await userService.updateUser(tenantId, warehouseId, userId, userData)
+    return res.status(httpStatus.OK).json(successResponse(updatedUser, httpStatus.OK, 'User updated successfully'))
   } catch (error: any) {
-    return res.status(400).json({ error: error.message })
+    return res.status(httpStatus.BAD_REQUEST).json(createError(httpStatus.BAD_REQUEST, error.message as string))
   }
 }
 
 export const deleteUser = async (req: Request, res: Response): Promise<Response> => {
-  const tenantId = res.locals.tenant_id
-  const warehouseId = res.locals.warehouse_id
+  const tenantId: number = res.locals.tenant_id
+  const warehouseId: number = res.locals.warehouse_id
   const userId = parseInt(req.params.id)
-
   try {
-    await prisma.user.delete({
-      where: {
-        tenant_id: tenantId,
-        warehouse_id: warehouseId,
-        id: userId
-      }
-    })
-
-    return res.status(204).send()
+    await userService.deleteUser(tenantId, warehouseId, userId)
+    return res.status(httpStatus.NO_CONTENT).send()
   } catch (error: any) {
-    return res.status(500).json({ error: error.message })
+    return res.status(httpStatus.INTERNAL_SERVER_ERROR).json(createError(httpStatus.INTERNAL_SERVER_ERROR, error.message as string))
   }
 }

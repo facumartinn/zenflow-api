@@ -1,32 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-// services/orderService.js
-import { PrismaClient } from '@prisma/client'
+import * as orderRepository from '../repositories/orderrepository'
 
-const prisma = new PrismaClient()
-
-export const createOrders = async (orders: any, tenantId: number, warehouseId: number) => {
-  // Logica para crear órdenes
-  // Asegúrate de agregar tenantId y warehouseId a cada orden
-  const newOrders = await prisma.order.createMany({
-    data: orders.map((order: any) => ({
-      ...order,
-      tenant_id: tenantId,
-      warehouse_id: warehouseId,
-      state_id: order.stateId || 1 // Suponiendo que el estado inicial es 1
-    }))
-  })
-  return newOrders
+export const createOrders = async (orders: any[], tenantId: number, warehouseId: number) => {
+  return await orderRepository.createOrders(orders, tenantId, warehouseId)
 }
 
 export const getAllOrders = async (tenantId: number, warehouseId: number) => {
-  // Logica para obtener todas las órdenes
-  const orders = await prisma.order.findMany({
-    where: {
-      tenant_id: tenantId,
-      warehouse_id: warehouseId
-    }
-  })
-  return orders
+  return await orderRepository.getAllOrders(tenantId, warehouseId)
 }
 
 export const getFilteredOrders = async (filters: any, tenantId: number, warehouseId: number) => {
@@ -47,52 +27,19 @@ export const getFilteredOrders = async (filters: any, tenantId: number, warehous
       filters.assemblyDate.lte = new Date(endDate as string)
     }
   }
-  // Logica para obtener órdenes filtradas
-  const orders = await prisma.order.findMany({
-    where: {
-      tenant_id: tenantId,
-      warehouse_id: warehouseId,
-      ...filters
-    }
-  })
-  return orders
+  return await orderRepository.getFilteredOrders(filters, tenantId, warehouseId)
 }
 
-export const getOrder = async (orderId: any, tenantId: number, warehouseId: number) => {
-  // Logica para obtener una orden específica
-  const order = await prisma.order.findUnique({
-    where: {
-      id: orderId,
-      tenant_id: tenantId,
-      warehouse_id: warehouseId
-    }
-  })
-  return order
+export const getOrder = async (orderId: number, tenantId: number, warehouseId: number) => {
+  return await orderRepository.getOrder(orderId, tenantId, warehouseId)
 }
 
 export const updateOrder = async (orderId: number, updateData: any, tenantId: number, warehouseId: number) => {
-  // Logica para actualizar una orden
-  const updatedOrder = await prisma.order.update({
-    where: {
-      id: orderId,
-      tenant_id: tenantId,
-      warehouse_id: warehouseId
-    },
-    data: updateData
-  })
-  return updatedOrder
+  return await orderRepository.updateOrder(orderId, updateData, tenantId, warehouseId)
 }
 
 export const deleteOrder = async (orderId: number, tenantId: number, warehouseId: number) => {
-  // Logica para eliminar una orden
-  await prisma.order.delete({
-    where: {
-      id: orderId,
-      tenant_id: tenantId,
-      warehouse_id: warehouseId
-    }
-  })
-  return { message: 'Order deleted' }
+  await orderRepository.deleteOrder(orderId, tenantId, warehouseId)
 }
 
 export const updateOrderStatus = async (
@@ -102,27 +49,5 @@ export const updateOrderStatus = async (
   tenantId: number,
   warehouseId: number
 ) => {
-  await prisma.$transaction(async (prisma) => {
-    await prisma.order.update({
-      where: {
-        id: orderId,
-        tenant_id: tenantId,
-        warehouse_id: warehouseId
-      },
-      data: {
-        state_id: newStateId,
-        user_id: userId
-      }
-    })
-
-    await prisma.orderState.create({
-      data: {
-        tenant_id: tenantId,
-        order_id: orderId,
-        state_id: newStateId,
-        user_id: userId,
-        creationDate: new Date()
-      }
-    })
-  })
+  await orderRepository.updateOrderStatus(orderId, newStateId, userId, tenantId, warehouseId)
 }
